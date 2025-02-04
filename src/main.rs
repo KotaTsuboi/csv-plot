@@ -17,6 +17,9 @@ const Y_LABEL_AREA_SIZE: i32 = 42;
 // 点のサイズ
 const CIRCLE_SIZE: i32 = 2;
 
+const X_OPERATION: &str = "x/1339.0";
+const Y_OPERATION: &str = "y";
+
 const Y_MARK: [f32; 2] = [200.0, 300.0];
 
 use array::TwoDimentionalArray;
@@ -39,6 +42,31 @@ fn main() {
     }
 }
 
+use evalexpr::error::EvalexprError::ExpectedFloat;
+use evalexpr::Value::Int;
+use evalexpr::*;
+
+fn operate(expr: &str, variable: &str, data: Vec<f32>) -> Vec<f32> {
+    let mut after = Vec::new();
+
+    for x in data {
+        let expr = format!("{variable} = {x}; {expr}");
+        let result = match eval_float(&expr) {
+            Ok(result) => result,
+            Err(e) => match e {
+                ExpectedFloat { actual } => match actual {
+                    Int(i) => i as f64,
+                    _ => panic!(""),
+                },
+                _ => panic!(""),
+            },
+        };
+        after.push(result as f32);
+    }
+
+    after
+}
+
 fn process(csv_file: &str, out_file: &str) -> Result<(), Box<dyn std::error::Error>> {
     // (1) プロット用データの準備
 
@@ -49,6 +77,7 @@ fn process(csv_file: &str, out_file: &str) -> Result<(), Box<dyn std::error::Err
     let x_strategy = ValueStrategy::new();
     // x軸：日付の系列
     let xs = x_strategy.series(&data.index())?;
+    let xs = operate(X_OPERATION, "x", xs);
     // x軸の値の範囲
     let x_range = x_strategy.range(&xs)?;
 
@@ -56,6 +85,7 @@ fn process(csv_file: &str, out_file: &str) -> Result<(), Box<dyn std::error::Err
     let y_strategy = ValueStrategy::new();
     // y軸：値の系列
     let ys = y_strategy.series(&data.dat())?;
+    let ys = operate(Y_OPERATION, "y", ys);
     // y軸の値の範囲
     let y_range = y_strategy.range(&ys)?;
 
