@@ -1,26 +1,26 @@
 // 出力するグラフ画像のサイズ
-const IMAGE_WIDTH: u32 = 1024;
-const IMAGE_HEIGHT: u32 = 768;
+const IMAGE_WIDTH: u32 = 512;
+const IMAGE_HEIGHT: u32 = 384;
 
 // 出力するグラフ画像のキャプション・フォント・サイズ
 const CAPTION: &str = "P-θ";
 const FONT_FACE: &str = "sans-serif";
-const FONT_SIZE: i32 = 20;
+const FONT_SIZE: i32 = 10;
 
 // 上下左右全ての余白
 const MARGIN: i32 = 10;
 // x軸ラベル部分の余白
-const X_LABEL_AREA_SIZE: i32 = 50;
+const X_LABEL_AREA_SIZE: i32 = 40;
 // y軸ラベル部分の余白
-const Y_LABEL_AREA_SIZE: i32 = 50;
+const Y_LABEL_AREA_SIZE: i32 = 40;
 
 const X_DESC: &str = "変形角";
 const Y_DESC: &str = "荷重[kN]";
 const AXIS_FONT_FACE: &str = "sans-serif";
-const AXIS_FONT_SIZE: i32 = 20;
+const AXIS_FONT_SIZE: i32 = 10;
 
 // 点のサイズ
-const CIRCLE_SIZE: i32 = 2;
+const CIRCLE_SIZE: i32 = 1;
 
 const X_OPERATION: &str = "x/1339.0";
 const Y_OPERATION: &str = "y";
@@ -152,7 +152,7 @@ fn process(csv_file: &str, out_file: &str) -> Result<(), Box<dyn std::error::Err
         let style = ShapeStyle {
             color: RED.to_rgba(),
             filled: true,
-            stroke_width: 2,
+            stroke_width: 1,
         };
 
         let path_element = PathElement::new(points, style);
