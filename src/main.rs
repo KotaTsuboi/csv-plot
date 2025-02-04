@@ -3,19 +3,21 @@ const IMAGE_WIDTH: u32 = 1024;
 const IMAGE_HEIGHT: u32 = 768;
 
 // 出力するグラフ画像のキャプション・フォント・サイズ
-const CAPTION: &str = "graph";
+const CAPTION: &str = "P-θ";
 const FONT_FACE: &str = "sans-serif";
 const FONT_SIZE: i32 = 20;
 
 // 上下左右全ての余白
 const MARGIN: i32 = 10;
 // x軸ラベル部分の余白
-const X_LABEL_AREA_SIZE: i32 = 16;
+const X_LABEL_AREA_SIZE: i32 = 50;
 // y軸ラベル部分の余白
-const Y_LABEL_AREA_SIZE: i32 = 42;
+const Y_LABEL_AREA_SIZE: i32 = 50;
 
 const X_DESC: &str = "変形角";
 const Y_DESC: &str = "荷重[kN]";
+const AXIS_FONT_FACE: &str = "sans-serif";
+const AXIS_FONT_SIZE: i32 = 20;
 
 // 点のサイズ
 const CIRCLE_SIZE: i32 = 2;
@@ -114,11 +116,15 @@ fn process(csv_file: &str, out_file: &str) -> Result<(), Box<dyn std::error::Err
 
     // x軸y軸、グリッド線などを描画
     //chart.configure_mesh().draw()?;
+
+    let axis_desc_style = (AXIS_FONT_FACE, AXIS_FONT_SIZE);
+
     chart
         .configure_mesh()
         .x_label_formatter(&|x: &f32| x.to_string())
         .x_desc(X_DESC)
         .y_desc(Y_DESC)
+        .axis_desc_style(axis_desc_style)
         .draw()?;
 
     // 折れ線グラフの描画
