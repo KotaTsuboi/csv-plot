@@ -54,10 +54,7 @@ fn operate(expr: &str, variable: &str, data: Vec<f32>) -> Vec<f32> {
         let result = match eval_float(&expr) {
             Ok(result) => result,
             Err(e) => match e {
-                ExpectedFloat { actual } => match actual {
-                    Int(i) => i as f64,
-                    _ => panic!(""),
-                },
+                ExpectedFloat { actual: Int(i) } => i as f64,
                 _ => panic!(""),
             },
         };
@@ -128,9 +125,9 @@ fn process(csv_file: &str, out_file: &str) -> Result<(), Box<dyn std::error::Err
         Circle::new(
             (*x, *y),
             CIRCLE_SIZE,
-            &RED, // 色を指定
-                  // ↓円を塗りつぶしたければこちら
-                  // ShapeStyle::from(&RED).filled(),
+            RED, // 色を指定
+                 // ↓円を塗りつぶしたければこちら
+                 // ShapeStyle::from(&RED).filled(),
         )
     });
     chart.draw_series(point_series)?;
@@ -176,13 +173,13 @@ impl ValueStrategy {
 
 impl AxisStrategy<f32, f32> for ValueStrategy {
     fn series(&self, series: &Vec<f32>) -> Result<Vec<f32>, Box<dyn std::error::Error>> {
-        Ok(series.iter().map(|y| (*y).clone()).collect())
+        Ok(series.to_vec())
     }
 
     fn range(&self, ys: &Vec<f32>) -> Result<Range<f32>, Box<dyn std::error::Error>> {
         let (y_min, y_max) = ys
             .iter()
-            .fold((0.0 / 0.0, 0.0 / 0.0), |(m, n), v| (v.min(m), v.max(n)));
+            .fold((f32::NAN, f32::NAN), |(m, n), v| (v.min(m), v.max(n)));
         // [MEMO]
         // y軸の最大最小値を算出
         // f32型はNaNが定義されていてys.iter().max()等が使えないので工夫が必要
