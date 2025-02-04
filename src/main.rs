@@ -14,6 +14,9 @@ const X_LABEL_AREA_SIZE: i32 = 16;
 // y軸ラベル部分の余白
 const Y_LABEL_AREA_SIZE: i32 = 42;
 
+const X_DESC: &str = "変形角";
+const Y_DESC: &str = "荷重[kN]";
+
 // 点のサイズ
 const CIRCLE_SIZE: i32 = 2;
 
@@ -114,6 +117,8 @@ fn process(csv_file: &str, out_file: &str) -> Result<(), Box<dyn std::error::Err
     chart
         .configure_mesh()
         .x_label_formatter(&|x: &f32| x.to_string())
+        .x_desc(X_DESC)
+        .y_desc(Y_DESC)
         .draw()?;
 
     // 折れ線グラフの描画
