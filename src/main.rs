@@ -1,51 +1,63 @@
-// 出力するグラフ画像のサイズ
-const IMAGE_WIDTH: u32 = 512;
-const IMAGE_HEIGHT: u32 = 384;
+use clap::Parser;
 
-// 出力するグラフ画像のキャプション・フォント・サイズ
-const CAPTION: &str = "P-θ";
-const FONT_FACE: &str = "sans-serif";
-const FONT_SIZE: i32 = 10;
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+pub struct Config {
+    /// 出力するグラフ画像のサイズ
+    #[arg(long, default_value_t = 512)]
+    image_width: u32,
+    #[arg(long, default_value_t = 384)]
+    image_height: u32,
 
-// 上下左右全ての余白
-const MARGIN: i32 = 10;
-// x軸ラベル部分の余白
-const X_LABEL_AREA_SIZE: i32 = 40;
-// y軸ラベル部分の余白
-const Y_LABEL_AREA_SIZE: i32 = 40;
+    /// 出力するグラフ画像のキャプション・フォント・サイズ
+    #[arg(long, default_value = "")]
+    caption: String,
+    #[arg(long, default_value = "sans-serif")]
+    font_face: String,
+    #[arg(long, default_value_t = 10)]
+    font_size: i32,
 
-const X_DESC: &str = "変形角";
-const Y_DESC: &str = "荷重[kN]";
-const AXIS_FONT_FACE: &str = "sans-serif";
-const AXIS_FONT_SIZE: i32 = 10;
+    /// 上下左右全ての余白
+    #[arg(long, default_value_t = 10)]
+    margin: i32,
+    /// x軸ラベル部分の余白
+    #[arg(long, default_value_t = 40)]
+    x_label_area_size: i32,
+    /// y軸ラベル部分の余白
+    #[arg(long, default_value_t = 40)]
+    y_label_area_size: i32,
 
-// 点のサイズ
-const CIRCLE_SIZE: i32 = 1;
+    #[arg(long, default_value = "")]
+    x_desc: String,
+    #[arg(long, default_value = "")]
+    y_desc: String,
+    #[arg(long, default_value = "sans_serif")]
+    axis_font_face: String,
+    #[arg(long, default_value_t = 10)]
+    axis_font_size: i32,
 
-const X_OPERATION: &str = "x/1339.0";
-const Y_OPERATION: &str = "y";
+    /// 点のサイズ
+    #[arg(long, default_value_t = 1)]
+    circle_size: i32,
 
-const Y_MARK: [f32; 2] = [200.0, 300.0];
+    #[arg(long, default_value = "x")]
+    x_operation: String,
+    #[arg(long, default_value = "y")]
+    y_operation: String,
+
+    #[arg(long, value_delimiter = ',')]
+    y_mark: Vec<f32>,
+
+    #[arg(long, short)]
+    input: String,
+    #[arg(long, short)]
+    output: String,
+}
 
 use array::TwoDimentionalArray;
 use plotters::prelude::*;
 
 mod array;
-
-fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    if args.len() < 3 {
-        eprintln!("[Usage] {} data.csv out.svg", args[0]);
-        return;
-    }
-
-    let csv_file = &args[1];
-    let out_file = &args[2];
-
-    if let Err(e) = process(csv_file, out_file) {
-        eprintln!("[Error] {}", e);
-    }
-}
 
 use evalexpr::error::EvalexprError::ExpectedFloat;
 use evalexpr::Value::Int;
@@ -69,17 +81,19 @@ fn operate(expr: &str, variable: &str, data: Vec<f32>) -> Vec<f32> {
     after
 }
 
-fn process(csv_file: &str, out_file: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let config = Config::parse();
+
     // (1) プロット用データの準備
 
     // CSV ファイルから読み出す
-    let data: TwoDimentionalArray<f32> = array::from_csv_file(csv_file)?;
+    let data: TwoDimentionalArray<f32> = array::from_csv_file(&config.input)?;
 
     // x軸
     let x_strategy = ValueStrategy::new();
     // x軸：日付の系列
     let xs = x_strategy.series(&data.index())?;
-    let xs = operate(X_OPERATION, "x", xs);
+    let xs = operate(&config.x_operation, "x", xs);
     // x軸の値の範囲
     let x_range = x_strategy.range(&xs)?;
 
@@ -87,26 +101,27 @@ fn process(csv_file: &str, out_file: &str) -> Result<(), Box<dyn std::error::Err
     let y_strategy = ValueStrategy::new();
     // y軸：値の系列
     let ys = y_strategy.series(&data.dat())?;
-    let ys = operate(Y_OPERATION, "y", ys);
+    let ys = operate(&config.y_operation, "y", ys);
     // y軸の値の範囲
     let y_range = y_strategy.range(&ys)?;
 
     // (2) 描画先の情報を設定
 
     // 描画先を指定。画像出力する場合はBitMapBackend
-    let root = SVGBackend::new(out_file, (IMAGE_WIDTH, IMAGE_HEIGHT)).into_drawing_area();
+    let root = SVGBackend::new(&config.output, (&config.image_width, &config.image_height))
+        .into_drawing_area();
 
     // 背景を白にする
     root.fill(&WHITE)?;
 
     // (3) グラフ全般の設定
-    let font = (FONT_FACE, FONT_SIZE);
+    let font = (&config.font_face, &config.font_size);
 
     let mut chart = ChartBuilder::on(&root)
-        .caption(CAPTION, font.into_font())
-        .margin(MARGIN)
-        .x_label_area_size(X_LABEL_AREA_SIZE)
-        .y_label_area_size(Y_LABEL_AREA_SIZE)
+        .caption(&config.caption, font.into_font())
+        .margin(&config.margin)
+        .x_label_area_size(&config.x_label_area_size)
+        .y_label_area_size(&config.y_label_area_size)
         .build_cartesian_2d(
             // x軸とy軸の値の範囲を指定
             x_range, y_range,
@@ -117,13 +132,13 @@ fn process(csv_file: &str, out_file: &str) -> Result<(), Box<dyn std::error::Err
     // x軸y軸、グリッド線などを描画
     //chart.configure_mesh().draw()?;
 
-    let axis_desc_style = (AXIS_FONT_FACE, AXIS_FONT_SIZE);
+    let axis_desc_style = (axis_font_face, axis_font_size);
 
     chart
         .configure_mesh()
         .x_label_formatter(&|x: &f32| x.to_string())
-        .x_desc(X_DESC)
-        .y_desc(Y_DESC)
+        .x_desc(&config.x_desc)
+        .y_desc(&config.y_desc)
         .axis_desc_style(axis_desc_style)
         .draw()?;
 
@@ -135,7 +150,7 @@ fn process(csv_file: &str, out_file: &str) -> Result<(), Box<dyn std::error::Err
     let point_series = xs.iter().zip(ys.iter()).map(|(x, y)| {
         Circle::new(
             (*x, *y),
-            CIRCLE_SIZE,
+            &config.circle_size,
             RED, // 色を指定
                  // ↓円を塗りつぶしたければこちら
                  // ShapeStyle::from(&RED).filled(),
@@ -146,7 +161,7 @@ fn process(csv_file: &str, out_file: &str) -> Result<(), Box<dyn std::error::Err
     let x_min = chart.x_range().start;
     let x_max = chart.x_range().end;
 
-    for y in Y_MARK {
+    for y in &config.y_mark {
         let points = vec![(x_min, y), (x_max, y)];
 
         let style = ShapeStyle {
