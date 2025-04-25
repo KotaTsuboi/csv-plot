@@ -1,31 +1,40 @@
 // 出力するグラフ画像のサイズ
 const IMAGE_WIDTH: u32 = 512;
-const IMAGE_HEIGHT: u32 = 384;
+const IMAGE_HEIGHT: u32 = 512;
 
 // 出力するグラフ画像のキャプション・フォント・サイズ
 const CAPTION: &str = "P-θ";
 const FONT_FACE: &str = "sans-serif";
-const FONT_SIZE: i32 = 10;
+const FONT_SIZE: i32 = 20;
 
 // 上下左右全ての余白
 const MARGIN: i32 = 10;
 // x軸ラベル部分の余白
 const X_LABEL_AREA_SIZE: i32 = 40;
 // y軸ラベル部分の余白
-const Y_LABEL_AREA_SIZE: i32 = 40;
+const Y_LABEL_AREA_SIZE: i32 = 60;
 
 const X_DESC: &str = "変形角";
 const Y_DESC: &str = "荷重[kN]";
 const AXIS_FONT_FACE: &str = "sans-serif";
-const AXIS_FONT_SIZE: i32 = 10;
+const AXIS_FONT_SIZE: i32 = 20;
 
 // 点のサイズ
 const CIRCLE_SIZE: i32 = 1;
 
-const X_OPERATION: &str = "x/1339.0";
-const Y_OPERATION: &str = "y";
+const X_OPERATION: &str = "-x/1339.0";
+const Y_OPERATION: &str = "-y/1000.0";
 
-const Y_MARK: [f32; 2] = [200.0, 300.0];
+const Y_MARK: [f32; 4] = [364.0, 400.0, 433.0, 476.0];
+const Y_MARK_LABEL: [&str; 4] = ["cP1 = 364kN", "P1 = 400kN", "cP2 = 433kN", "P2 = 476kN"];
+const Y_MARK_COLOR: [RGBColor; 4] = [
+    RGBColor(3, 175, 122),
+    RGBColor(255, 75, 80),
+    RGBColor(3, 175, 122),
+    RGBColor(255, 75, 80),
+];
+
+const PLOT_COLOR: RGBColor = RGBColor(0, 90, 255);
 
 use array::TwoDimentionalArray;
 use plotters::prelude::*;
@@ -89,7 +98,11 @@ fn process(csv_file: &str, out_file: &str) -> Result<(), Box<dyn std::error::Err
     let ys = y_strategy.series(&data.dat())?;
     let ys = operate(Y_OPERATION, "y", ys);
     // y軸の値の範囲
-    let y_range = y_strategy.range(&ys)?;
+    let mut y_range = y_strategy.range(&ys)?;
+
+    for y in Y_MARK {
+        y_range = f32::min(y_range.start, y - 100.0)..f32::max(y_range.end, y + 100.0);
+    }
 
     // (2) 描画先の情報を設定
 
@@ -121,39 +134,42 @@ fn process(csv_file: &str, out_file: &str) -> Result<(), Box<dyn std::error::Err
 
     chart
         .configure_mesh()
-        .x_label_formatter(&|x: &f32| x.to_string())
+        .x_label_formatter(&|x: &f32| {
+            if *x == 0.0 {
+                "0".to_string()
+            } else {
+                format!("1/{}", f32::round(1.0 / x))
+            }
+        })
+        .y_label_formatter(&|y| f32::round(*y).to_string())
         .x_desc(X_DESC)
         .y_desc(Y_DESC)
         .axis_desc_style(axis_desc_style)
         .draw()?;
 
-    // 折れ線グラフの描画
-    let line_series = LineSeries::new(xs.iter().zip(ys.iter()).map(|(x, y)| (*x, *y)), &RED);
-    chart.draw_series(line_series)?;
-
-    // 点グラフの描画
-    let point_series = xs.iter().zip(ys.iter()).map(|(x, y)| {
-        Circle::new(
-            (*x, *y),
-            CIRCLE_SIZE,
-            RED, // 色を指定
-                 // ↓円を塗りつぶしたければこちら
-                 // ShapeStyle::from(&RED).filled(),
-        )
-    });
-    chart.draw_series(point_series)?;
-
     let x_min = chart.x_range().start;
     let x_max = chart.x_range().end;
 
-    for y in Y_MARK {
+    for i in 0..Y_MARK.len() {
+        let y = Y_MARK[i];
+        let y_mark_label = Y_MARK_LABEL[i];
+        let color = Y_MARK_COLOR[i];
+
         let points = vec![(x_min, y), (x_max, y)];
 
         let style = ShapeStyle {
-            color: RED.to_rgba(),
+            color: color.to_rgba(),
             filled: true,
-            stroke_width: 1,
+            stroke_width: 2,
         };
+
+        let text_element = plotters::element::Text::new(
+            y_mark_label,
+            (x_min, y + 20.0),
+            ("sans-serif", 16).into_font().color(&color),
+        );
+        let text_series = std::iter::once(text_element);
+        chart.draw_series(text_series)?;
 
         let path_element = PathElement::new(points, style);
 
@@ -161,6 +177,22 @@ fn process(csv_file: &str, out_file: &str) -> Result<(), Box<dyn std::error::Err
 
         chart.draw_series(mark_series)?;
     }
+
+    // 折れ線グラフの描画
+    let line_series = LineSeries::new(xs.iter().zip(ys.iter()).map(|(x, y)| (*x, *y)), &PLOT_COLOR);
+    chart.draw_series(line_series)?;
+
+    // 点グラフの描画
+    let point_series = xs.iter().zip(ys.iter()).map(|(x, y)| {
+        Circle::new(
+            (*x, *y),
+            CIRCLE_SIZE,
+            PLOT_COLOR, // 色を指定
+                        // ↓円を塗りつぶしたければこちら
+                        // ShapeStyle::from(&RED).filled(),
+        )
+    });
+    chart.draw_series(point_series)?;
 
     Ok(())
 }
